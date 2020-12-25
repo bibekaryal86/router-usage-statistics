@@ -15,3 +15,5 @@ The App runs on embedded Jetty, uses Quartz, JSoup and MongoDb driver.
 
 MongoDb supports BigDecimal objects, should have used that for dataUpload/dataDownload/dataTotals instead of String
 to avoid all the conversions during calculations
+
+And, of course, Java should not be used to create html code!
