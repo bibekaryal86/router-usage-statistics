@@ -51,7 +51,7 @@ public class ViewClass {
         String styleClose = "</style>";
         return styleOpen +
                 " body { font-family: arial, sans-serif; }" +
-                " table { font-family: arial, sans-serif; border-collapse: collapse; width: auto; }" +
+                " table { font-family: arial, sans-serif; border-collapse: collapse; width: auto; margin: 8px; }" +
                 " td, th { border: 1px solid #dddddd; text-align: left; padding: 8px; }" +
                 " tr:nth-child(even) { background-color: #dddddd; }" +
                 styleClose;
@@ -72,7 +72,7 @@ public class ViewClass {
     }
 
     private static String getTotals(ModelClass modelClass) {
-        String divOpen = "<div id=\"TOTALS\" style=\"font-weight:bold\">";
+        String divOpen = "<div id=\"TOTALS\" style=\"font-weight: bold;\">";
         return divOpen +
                 " | Totals:" +
                 UPLOAD_SHORT +
@@ -86,7 +86,7 @@ public class ViewClass {
     }
 
     private static String getToday(ModelClass modelClass) {
-        String divOpen = "<div id=\"TODAY\" style=\"font-weight:bold\">";
+        String divOpen = "<div id=\"TODAY\" style=\"font-weight: bold;\">";
         return divOpen +
                 " | Today (till " + getTodayUpToTime(now().getHour()) + "): " +
                 UPLOAD_SHORT +
@@ -100,7 +100,7 @@ public class ViewClass {
     }
 
     private static String getTotalsToday(ModelClass modelClassTotal, ModelClass modelClassToday) {
-        String divOpen = "<div id=\"TOTALS_TODAY\" style=\"font-weight:bold\">";
+        String divOpen = "<div id=\"TOTALS_TODAY\" style=\"font-weight: bold;\">";
 
         return divOpen +
                 " | Totals (/w Today): " +
@@ -126,7 +126,10 @@ public class ViewClass {
     private static String getTableHead() {
         String theadOpen = "<thead>";
         String theadClose = "</thead>";
-        return theadOpen +
+
+        String oneTwoThree = "<tr><th colspan=\"4\" style=\"text-align: center;\">DATA OF SELECTED MONTH</th></tr>";
+
+        return theadOpen + oneTwoThree +
                 getTableRow(true, null) +
                 theadClose;
     }
