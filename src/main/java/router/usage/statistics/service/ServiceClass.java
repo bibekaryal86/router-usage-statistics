@@ -240,11 +240,15 @@ public class ServiceClass {
     }
 
     private static List<ModelClass> filterDataUsageListToInsert(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongos) {
-        // do not insert for today's date (insert today's tomorrow)
-        // do not insert if record exists in database for given date
+        List<String> modelClassListMongosDates = modelClassListMongos.stream()
+                .map(ModelClass::getDate)
+                .collect(toList());
+
         return modelClassListJsoup.stream()
+                // do not insert for today's date (insert today's tomorrow)
                 .filter(dataUsageJ -> !dataUsageJ.getDate().equals(LocalDate.now().toString()))
-                .filter(dataUsageJ -> modelClassListMongos.stream().anyMatch(dataUsageM -> !dataUsageJ.getDate().equals(dataUsageM.getDate())))
+                // do not insert if record exists in database for given date
+                .filter(dataUsageJ -> !modelClassListMongosDates.contains(dataUsageJ.getDate()))
                 .collect(toList());
     }
 }
