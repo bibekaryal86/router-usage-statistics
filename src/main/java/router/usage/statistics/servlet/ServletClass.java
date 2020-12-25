@@ -8,6 +8,7 @@ import router.usage.statistics.model.ModelClass;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import static java.time.LocalDate.now;
 import static java.util.Collections.singletonList;
@@ -22,12 +23,37 @@ public class ServletClass extends HttpServlet {
         response.setContentType("text/html");
         response.setStatus(HttpServletResponse.SC_OK);
 
-        List<ModelClass> modelClassList = retrieveDataUsages(singletonList(String.valueOf(now().getYear())),
-                singletonList(String.valueOf(now().getMonthValue())));
-        ModelClass modelClassTotal = calculateTotalDataUsage(modelClassList);
-        ModelClass modelClassToday = getWanTrafficTodayOnly();
-        String htmlToDisplay = getDisplay(modelClassList, modelClassTotal, modelClassToday);
+        String selected = request.getParameter("selected");
+        String defaultSelected = now().getYear() + "-" + now().getMonthValue();
+        boolean isTotalTodayNeeded = false;
 
+        if (selected == null || selected.isEmpty()) {
+            selected = now().getYear() + "-" + now().getMonthValue();
+        }
+
+        if (selected.equals(defaultSelected)) {
+            isTotalTodayNeeded = true;
+        }
+
+        String[] selectedYearMonth = selected.split("-");
+        List<String> selectedYear = singletonList(selectedYearMonth[0]);
+        List<String> selectedMonth = singletonList(selectedYearMonth[1]);
+
+        Set<String> yearMonthSet = retrieveUniqueDatesOnly();
+        List<ModelClass> modelClassList = retrieveDataUsages(selectedYear, selectedMonth);
+
+        ModelClass modelClassTotal = calculateTotalDataUsage(modelClassList);
+        ModelClass modelClassToday = newModelClass();
+
+        if (isTotalTodayNeeded) {
+            modelClassToday = getWanTraffic("all", "hour", "24").get(0);
+        }
+
+        String htmlToDisplay = getDisplay(modelClassList, modelClassTotal, modelClassToday, selected, yearMonthSet, isTotalTodayNeeded);
         response.getWriter().println(htmlToDisplay);
+    }
+
+    private ModelClass newModelClass() {
+        return new ModelClass(null, null, null, null, "0.00", "0.00", "0.00");
     }
 }

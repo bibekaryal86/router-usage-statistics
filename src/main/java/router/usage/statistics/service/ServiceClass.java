@@ -11,10 +11,7 @@ import router.usage.statistics.model.ModelClass;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
@@ -23,8 +20,10 @@ import static java.time.LocalTime.MIDNIGHT;
 import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 import static org.eclipse.jetty.util.LazyList.isEmpty;
 import static org.jsoup.Jsoup.parse;
 import static router.usage.statistics.connector.ConnectorClass.*;
@@ -45,30 +44,6 @@ public class ServiceClass {
     public static final String LOGIN_URL = "http://router.asus.com/Main_Login.asp";
     public static final String GET_TRAFFIC_WAN_URL = "http://router.asus.com/getWanTraffic.asp";
     public static final String TRAFFIC_ANALYZER_URL = "http://router.asus.com/TrafficAnalyzer_Statistic.asp";
-
-    private static void login() {
-        Map<String, String> formData = new HashMap<>();
-        formData.put("group_id", "");
-        formData.put("action_mode", "");
-        formData.put("action_script", "");
-        formData.put("action_wait", "");
-        formData.put("current_page", "Main_Login.asp");
-        formData.put("next_page", "index.asp");
-        formData.put("login_captcha", "");
-
-        Connection.Response connectionResponse = connectionResponse(LOGIN_ACTION_URL, new HashMap<>(), LOGIN_URL, formData,
-                Connection.Method.POST, USER_AGENT);
-
-        if (connectionResponse != null) {
-            cookies = connectionResponse.cookies();
-        }
-    }
-
-    public static ModelClass getWanTrafficTodayOnly() {
-        List<ModelClass> modelClassList = getWanTraffic("all", "hour", "24");
-        List<ModelClass> filteredModelClassList = filterDataUsageListByToday(modelClassList);
-        return calculateTotalDataUsage(filteredModelClassList);
-    }
 
     public static List<ModelClass> getWanTraffic(String client, String mode, String dura) {
         if (!isLoggedIn()) {
@@ -95,12 +70,102 @@ public class ServiceClass {
                 }
             }
 
-            Element body = document.body();
-            String bodyText = body.text();
-            return convertDataUsage(mode, Long.parseLong(dura), bodyText);
+            List<ModelClass> modelClassList = convertDataUsage(mode, Long.parseLong(dura), document.body().text());
+
+            if (dura.equals("24")) {
+                List<ModelClass> filteredModelClassList = filterDataUsageListByToday(modelClassList);
+                ModelClass modelClassToday = calculateTotalDataUsage(filteredModelClassList);
+                return singletonList(modelClassToday);
+            } else {
+                return modelClassList;
+            }
         } catch (Exception ex) {
             LOGGER.error("Get Wan Traffic", ex);
             return emptyList();
+        }
+    }
+
+    public static ModelClass calculateTotalDataUsage(List<ModelClass> modelClassList) {
+        BigDecimal totalUploads = new BigDecimal("0.00");
+        BigDecimal totalDownloads = new BigDecimal("0.00");
+        BigDecimal totalTotals = new BigDecimal("0.00");
+
+        for (ModelClass modelClass : modelClassList) {
+            totalUploads = totalUploads.add(new BigDecimal(modelClass.getDataUpload()));
+            totalDownloads = totalDownloads.add(new BigDecimal(modelClass.getDataDownload()));
+            totalTotals = totalTotals.add(new BigDecimal(modelClass.getDataTotal()));
+        }
+
+        return new ModelClass(null, null, null, null, totalUploads.toString(), totalDownloads.toString(), totalTotals.toString());
+    }
+
+    public static List<ModelClass> retrieveDataUsages(List<String> years, List<String> months) {
+        List<ModelClass> modelClassList = retrieveDailyDataUsage(years);
+
+        if (isEmpty(months)) {
+            return modelClassList;
+        } else {
+            return filterDataUsageListByMonth(modelClassList, months);
+        }
+    }
+
+    public static Set<String> retrieveUniqueDatesOnly() {
+        List<String> uniqueDates = retrieveUniqueDates();
+        return uniqueDates.stream()
+                .map(uniqueDate -> uniqueDate.substring(0, 7))
+                .collect(toSet());
+    }
+
+    public static void insertDataUsages() {
+        List<ModelClass> modelClassListJsoup = getWanTraffic("all", "day", "31");
+
+        if (modelClassListJsoup.isEmpty()) {
+            LOGGER.error("Data Usage List Jsoup to Insert is Empty");
+        } else {
+            LocalDate localDate = LocalDate.now();
+
+            List<String> years = new ArrayList<>();
+            years.add(String.valueOf(localDate.getYear()));
+
+            List<String> months = new ArrayList<>();
+            months.add(String.valueOf(localDate.getMonthValue()));
+            months.add(String.valueOf(localDate.minusMonths(1).getMonthValue()));
+            months.add(String.valueOf(localDate.minusMonths(2).getMonthValue()));
+
+            if (localDate.getMonthValue() < 3) {
+                years.add(String.valueOf(localDate.minusYears(1).getYear()));
+            }
+
+            List<ModelClass> modelClassListMongo = retrieveDataUsages(years, months);
+            List<ModelClass> modelClassListToInsert = filterDataUsageListToInsert(modelClassListJsoup, modelClassListMongo);
+
+            if (modelClassListToInsert.isEmpty()) {
+                LOGGER.error("Data Usage List to Insert is Empty");
+            } else {
+                if (modelClassListToInsert.size() == 1) {
+                    insertDailyDataUsage(modelClassListToInsert.get(0), null);
+                } else {
+                    insertDailyDataUsage(null, modelClassListToInsert);
+                }
+            }
+        }
+    }
+
+    private static void login() {
+        Map<String, String> formData = new HashMap<>();
+        formData.put("group_id", "");
+        formData.put("action_mode", "");
+        formData.put("action_script", "");
+        formData.put("action_wait", "");
+        formData.put("current_page", "Main_Login.asp");
+        formData.put("next_page", "index.asp");
+        formData.put("login_captcha", "");
+
+        Connection.Response connectionResponse = connectionResponse(LOGIN_ACTION_URL, new HashMap<>(), LOGIN_URL, formData,
+                Connection.Method.POST, USER_AGENT);
+
+        if (connectionResponse != null) {
+            cookies = connectionResponse.cookies();
         }
     }
 
@@ -163,64 +228,7 @@ public class ServiceClass {
         }
     }
 
-    public static void insertDataUsages() {
-        List<ModelClass> modelClassListJsoup = getWanTraffic("all", "day", "31");
 
-        if (modelClassListJsoup.isEmpty()) {
-            LOGGER.error("Data Usage List Jsoup to Insert is Empty");
-        } else {
-            LocalDate localDate = LocalDate.now();
-
-            List<String> years = new ArrayList<>();
-            years.add(String.valueOf(localDate.getYear()));
-
-            List<String> months = new ArrayList<>();
-            months.add(String.valueOf(localDate.getMonthValue()));
-            months.add(String.valueOf(localDate.minusMonths(1).getMonthValue()));
-            months.add(String.valueOf(localDate.minusMonths(2).getMonthValue()));
-
-            if (localDate.getMonthValue() < 3) {
-                years.add(String.valueOf(localDate.minusYears(1).getYear()));
-            }
-
-            List<ModelClass> modelClassListMongo = retrieveDataUsages(years, months);
-            List<ModelClass> modelClassListToInsert = filterDataUsageListToInsert(modelClassListJsoup, modelClassListMongo);
-
-            if (modelClassListToInsert.isEmpty()) {
-                LOGGER.error("Data Usage List to Insert is Empty");
-            } else {
-                if (modelClassListToInsert.size() == 1) {
-                    insertDailyDataUsage(modelClassListToInsert.get(0), null);
-                } else {
-                    insertDailyDataUsage(null, modelClassListToInsert);
-                }
-            }
-        }
-    }
-
-    public static List<ModelClass> retrieveDataUsages(List<String> years, List<String> months) {
-        List<ModelClass> modelClassList = retrieveDailyDataUsage(years);
-
-        if (isEmpty(months)) {
-            return modelClassList;
-        } else {
-            return filterDataUsageListByMonth(modelClassList, months);
-        }
-    }
-
-    public static ModelClass calculateTotalDataUsage(List<ModelClass> modelClassList) {
-        BigDecimal totalUploads = new BigDecimal("0.00");
-        BigDecimal totalDownloads = new BigDecimal("0.00");
-        BigDecimal totalTotals = new BigDecimal("0.00");
-
-        for (ModelClass modelClass : modelClassList) {
-            totalUploads = totalUploads.add(new BigDecimal(modelClass.getDataUpload()));
-            totalDownloads = totalDownloads.add(new BigDecimal(modelClass.getDataDownload()));
-            totalTotals = totalTotals.add(new BigDecimal(modelClass.getDataTotal()));
-        }
-
-        return new ModelClass(null, null, null, null, totalUploads.toString(), totalDownloads.toString(), totalTotals.toString());
-    }
 
     private static List<ModelClass> filterDataUsageListByToday(List<ModelClass> modelClassList) {
         LocalDateTime midnightHour = LocalDateTime.of(LocalDate.now(), MIDNIGHT);

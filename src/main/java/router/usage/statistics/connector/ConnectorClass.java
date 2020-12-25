@@ -2,6 +2,7 @@ package router.usage.statistics.connector;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
+import com.mongodb.client.DistinctIterable;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
@@ -125,5 +126,17 @@ public class ConnectorClass {
         }
 
         return modelClassList;
+    }
+
+    public static List<String> retrieveUniqueDates() {
+        List<String> dateList = new ArrayList<>();
+
+        try (MongoClient mongoClient = create(getMongoClientSettings())) {
+            MongoCollection<ModelClass> mongoCollectionModelClass = getMongoCollectionDataUsage(mongoClient);
+            DistinctIterable<String> distinctIterableString = mongoCollectionModelClass.distinct("date", String.class);
+            distinctIterableString.forEach(dateList::add);
+        }
+
+        return dateList;
     }
 }
