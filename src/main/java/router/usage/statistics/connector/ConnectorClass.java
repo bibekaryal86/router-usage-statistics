@@ -35,7 +35,7 @@ public class ConnectorClass {
     private ConnectorClass() { throw new IllegalStateException("Utility class"); }
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ConnectorClass.class);
-    private static final String MONGODB_URI = "mongodb://%s:%s@localhost:27017/?authSource=%s&ssl=false";
+    private static final String MONGODB_URI = "mongodb+srv://%s:%s@%s.2sj3v.mongodb.net/<dbname>?retryWrites=true&w=majority";
     private static final String COLLECTION_NAME = "model_class";
 
     private static String dbName = null;

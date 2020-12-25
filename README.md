@@ -17,3 +17,6 @@ MongoDb supports BigDecimal objects, should have used that for dataUpload/dataDo
 to avoid all the conversions during calculations
 
 And, of course, Java should not be used to create html code!
+
+When running the program, the following environment variables are needed: (1) website login username (2) website login password 
+(3) mongodb database name (4) mongodb username (5) mongodb password
