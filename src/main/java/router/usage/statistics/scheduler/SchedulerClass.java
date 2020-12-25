@@ -1,6 +1,9 @@
 package router.usage.statistics.scheduler;
 
-import org.quartz.*;
+import org.quartz.JobDetail;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.Trigger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,7 +13,6 @@ import static org.quartz.CronScheduleBuilder.dailyAtHourAndMinute;
 import static org.quartz.JobBuilder.newJob;
 import static org.quartz.TriggerBuilder.newTrigger;
 import static org.quartz.impl.StdSchedulerFactory.getDefaultScheduler;
-import static router.usage.statistics.service.ServiceClass.insertDataUsages;
 
 public class SchedulerClass {
 
@@ -23,7 +25,7 @@ public class SchedulerClass {
             Scheduler scheduler = getDefaultScheduler();
             scheduler.start();
 
-            JobDetail jobDetail = newJob(JobClass.class)
+            JobDetail jobDetail = newJob(SchedulerJobClass.class)
                     .withIdentity("Job_One")
                     .build();
 
@@ -41,17 +43,5 @@ public class SchedulerClass {
         }
 
         LOGGER.info("Finish Quartz Scheduler");
-    }
-}
-
-class JobClass implements Job {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(JobClass.class);
-
-    @Override
-    public void execute(JobExecutionContext context) throws JobExecutionException {
-        LOGGER.info("Start Execute");
-        insertDataUsages();
-        LOGGER.info("Finish Execute");
     }
 }
