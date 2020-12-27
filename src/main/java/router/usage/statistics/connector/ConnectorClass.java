@@ -119,11 +119,11 @@ public class ConnectorClass {
         }
     }
 
-    public static void updateDailyDataUsage(ModelClass modelClass) {
+    public static void updateDailyDataUsage(ModelClass modelClass, String date) {
         try (MongoClient mongoClient = create(getMongoClientSettings())) {
             MongoCollection<ModelClass> mongoCollectionModelClass = getMongoCollectionDataUsage(mongoClient);
 
-            Bson filter = eq("date", modelClass.getDate());
+            Bson filter = eq("date", date);
             Bson update1 = set("data_download", modelClass.getDataDownload());
             Bson update2 = set("data_upload", modelClass.getDataUpload());
             Bson update3 = set("data_total", modelClass.getDataTotal());
