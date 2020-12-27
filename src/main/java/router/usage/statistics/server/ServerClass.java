@@ -6,15 +6,16 @@ import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import router.usage.statistics.servlet.ServletClass;
 
+import static java.lang.Integer.parseInt;
+import static org.slf4j.LoggerFactory.getLogger;
 import static router.usage.statistics.util.UtilClass.SERVER_PORT;
 import static router.usage.statistics.util.UtilClass.getSystemEnvProperty;
 
 public class ServerClass {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ServerClass.class);
+    private static final Logger LOGGER = getLogger(ServerClass.class);
 
     public static final int SERVER_MAX_THREADS = 100;
     public static final int SERVER_MIN_THREADS = 20;
@@ -29,7 +30,7 @@ public class ServerClass {
         server = new Server(threadPool);
 
         try (ServerConnector connector = new ServerConnector(server)) {
-            int port = getSystemEnvProperty(SERVER_PORT) == null ? 8080 : Integer.parseInt(getSystemEnvProperty(SERVER_PORT));
+            int port = getSystemEnvProperty(SERVER_PORT) == null ? 8080 : parseInt(getSystemEnvProperty(SERVER_PORT));
             connector.setPort(port);
             server.setConnectors(new Connector[]{connector});
         }

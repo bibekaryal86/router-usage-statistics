@@ -24,15 +24,8 @@ public class ServletClass extends HttpServlet {
         response.setStatus(HttpServletResponse.SC_OK);
 
         String selected = request.getParameter("selected");
-        String defaultSelected = now().getYear() + "-" + now().getMonthValue();
-        boolean isTotalTodayNeeded = false;
-
         if (selected == null || selected.isEmpty()) {
             selected = now().getYear() + "-" + now().getMonthValue();
-        }
-
-        if (selected.equals(defaultSelected)) {
-            isTotalTodayNeeded = true;
         }
 
         String[] selectedYearMonth = selected.split("-");
@@ -41,19 +34,9 @@ public class ServletClass extends HttpServlet {
 
         Set<String> yearMonthSet = retrieveUniqueDatesOnly();
         List<ModelClass> modelClassList = retrieveDataUsages(selectedYear, selectedMonth);
-
         ModelClass modelClassTotal = calculateTotalDataUsage(modelClassList);
-        ModelClass modelClassToday = newModelClass();
 
-        if (isTotalTodayNeeded) {
-            modelClassToday = getWanTraffic("all", "hour", "24").get(0);
-        }
-
-        String htmlToDisplay = getDisplay(modelClassList, modelClassTotal, modelClassToday, selected, yearMonthSet, isTotalTodayNeeded);
+        String htmlToDisplay = getDisplay(modelClassList, modelClassTotal, selected, yearMonthSet);
         response.getWriter().println(htmlToDisplay);
-    }
-
-    private ModelClass newModelClass() {
-        return new ModelClass(null, null, null, null, "0.00", "0.00", "0.00");
     }
 }
