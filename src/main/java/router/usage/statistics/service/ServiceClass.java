@@ -174,7 +174,7 @@ public class ServiceClass {
                 LOGGER.error("Data Usage List to Insert is Empty");
             } else {
                 for (ModelClass modelClass : modelClassListToUpdate) {
-                    updateDailyDataUsage(modelClass);
+                    updateDailyDataUsage(modelClass, modelClass.getDate());
                 }
             }
         }
@@ -190,7 +190,7 @@ public class ServiceClass {
             if (modelClassTodayMongo == null) {
                 insertDailyDataUsage(modelClassTodayJsoup, null);
             } else {
-                updateDailyDataUsage(modelClassTodayJsoup);
+                updateDailyDataUsage(modelClassTodayJsoup, todayDate);
             }
         }
     }
