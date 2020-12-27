@@ -20,3 +20,6 @@ And, of course, Java should not be used to create html code!
 
 When running the program, the following environment variables are needed: (1) website login username (2) website login password 
 (3) mongodb database name (4) mongodb username (5) mongodb password
+
+For example: java -jar -DPORT=8005 -DDBNAME=mongodb_database_name -DDBUSR=database_username -DDBPWD=database_password 
+-DJSUSR=username_to_login_page -DJSPWD=password_to_login_page "C:\Users\ba5g3\JAVA\jarswars\router-usage-statistics.jar"
