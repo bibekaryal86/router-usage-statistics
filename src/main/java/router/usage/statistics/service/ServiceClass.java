@@ -92,8 +92,6 @@ public class ServiceClass {
     }
 
     private static List<ModelClass> getWanTraffic(String mode, String dura) {
-        LOGGER.info("Get Wan Traffic: {} | {}", mode, dura);
-
         if (!isLoggedIn()) {
             login();
         }
