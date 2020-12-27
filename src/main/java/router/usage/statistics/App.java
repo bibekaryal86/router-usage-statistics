@@ -4,13 +4,14 @@
 package router.usage.statistics;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import router.usage.statistics.scheduler.SchedulerClass;
 import router.usage.statistics.server.ServerClass;
 
+import static org.slf4j.LoggerFactory.getLogger;
+
 public class App {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(App.class);
+    private static final Logger LOGGER = getLogger(App.class);
 
     public static void main(String[] args) throws Exception {
         LOGGER.info("Begin router-usage-statistics initialization...");
