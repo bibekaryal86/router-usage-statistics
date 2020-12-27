@@ -56,7 +56,8 @@ public class ServiceClass {
         List<ModelClass> modelClassListJsoup = getWanTraffic("day", "31");
         List<ModelClass> modelClassListMongo = retrieveDataUsages(years, months);
 
-        dailyData(modelClassListJsoup, modelClassListMongo);
+        dailyDataInsert(modelClassListJsoup, modelClassListMongo);
+        dailyDataUpdate(modelClassListJsoup, modelClassListMongo);
         todayData(modelClassListMongo, localDate.toString());
     }
 
@@ -145,7 +146,7 @@ public class ServiceClass {
         }
     }
 
-    private static void dailyData(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
+    private static void dailyDataInsert(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
         if (modelClassListJsoup.isEmpty()) {
             LOGGER.info("Data Usage List Jsoup to Insert is Empty");
         } else {
@@ -163,6 +164,22 @@ public class ServiceClass {
         }
     }
 
+    private static void dailyDataUpdate(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
+        if (modelClassListJsoup.isEmpty()) {
+            LOGGER.info("Data Usage List Jsoup to Update is Empty");
+        } else {
+            List<ModelClass> modelClassListToUpdate = filterDataUsageListToUpdate(modelClassListJsoup, modelClassListMongo);
+
+            if (modelClassListToUpdate.isEmpty()) {
+                LOGGER.error("Data Usage List to Insert is Empty");
+            } else {
+                for (ModelClass modelClass : modelClassListToUpdate) {
+                    updateDailyDataUsage(modelClass);
+                }
+            }
+        }
+    }
+
     private static void todayData(List<ModelClass> modelClassListMongo, String todayDate) {
         ModelClass modelClassTodayMongo = filterDataUsageListByToday(modelClassListMongo, todayDate);
         ModelClass modelClassTodayJsoup = getWanTraffic("hour", "24").get(0);
@@ -173,7 +190,7 @@ public class ServiceClass {
             if (modelClassTodayMongo == null) {
                 insertDailyDataUsage(modelClassTodayJsoup, null);
             } else {
-                updateDailyDataUsage(modelClassTodayJsoup, todayDate);
+                updateDailyDataUsage(modelClassTodayJsoup);
             }
         }
     }
@@ -286,9 +303,18 @@ public class ServiceClass {
 
         return modelClassListJsoup.stream()
                 // do not insert for today's date (insert today's tomorrow)
-                .filter(dataUsageJ -> !dataUsageJ.getDate().equals(LocalDate.now().toString()))
+                .filter(modelClassJsoup -> !modelClassJsoup.getDate().equals(LocalDate.now().toString()))
                 // do not insert if record exists in database for given date
-                .filter(dataUsageJ -> !modelClassListMongoDates.contains(dataUsageJ.getDate()))
+                .filter(modelClassJsoup -> !modelClassListMongoDates.contains(modelClassJsoup.getDate()))
+                .collect(toList());
+    }
+
+    private static List<ModelClass> filterDataUsageListToUpdate(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
+        // find model classes where data_download does not match in the two lists
+        return modelClassListJsoup.stream()
+                .filter(modelClassJsoup -> modelClassListMongo.stream()
+                        .filter(modelClassMongo -> modelClassMongo.getDate().equals(modelClassJsoup.getDate()))
+                        .anyMatch(modelClassMongo -> !modelClassJsoup.getDataDownload().equals(modelClassMongo.getDataDownload())))
                 .collect(toList());
     }
 }
