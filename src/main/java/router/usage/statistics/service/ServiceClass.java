@@ -148,13 +148,11 @@ public class ServiceClass {
 
     private static void dailyDataInsert(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
         if (modelClassListJsoup.isEmpty()) {
-            LOGGER.info("Data Usage List Jsoup to Insert is Empty");
+            LOGGER.error("Data Usage List Jsoup to Insert is Empty");
         } else {
             List<ModelClass> modelClassListToInsert = filterDataUsageListToInsert(modelClassListJsoup, modelClassListMongo);
 
-            if (modelClassListToInsert.isEmpty()) {
-                LOGGER.error("Data Usage List to Insert is Empty");
-            } else {
+            if (!modelClassListToInsert.isEmpty()) {
                 if (modelClassListToInsert.size() == 1) {
                     insertDailyDataUsage(modelClassListToInsert.get(0), null);
                 } else {
@@ -169,14 +167,7 @@ public class ServiceClass {
             LOGGER.info("Data Usage List Jsoup to Update is Empty");
         } else {
             List<ModelClass> modelClassListToUpdate = filterDataUsageListToUpdate(modelClassListJsoup, modelClassListMongo);
-
-            if (modelClassListToUpdate.isEmpty()) {
-                LOGGER.error("Data Usage List to Insert is Empty");
-            } else {
-                for (ModelClass modelClass : modelClassListToUpdate) {
-                    updateDailyDataUsage(modelClass, modelClass.getDate());
-                }
-            }
+            modelClassListToUpdate.forEach(modelClassToUpdate -> updateDailyDataUsage(modelClassToUpdate, modelClassToUpdate.getDate()));
         }
     }
 
