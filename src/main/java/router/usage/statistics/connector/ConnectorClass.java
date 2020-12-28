@@ -8,6 +8,8 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
 import com.mongodb.client.model.InsertManyOptions;
+import com.mongodb.client.result.InsertManyResult;
+import com.mongodb.client.result.InsertOneResult;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import org.bson.conversions.Bson;
@@ -106,13 +108,17 @@ public class ConnectorClass {
     }
 
     public static void insertDailyDataUsage(ModelClass modelClass, List<ModelClass> modelClassList) {
+        LOGGER.info("Insert Daily Data Usage: {} | {}", modelClass, modelClassList);
+
         try (MongoClient mongoClient = create(getMongoClientSettings())) {
             MongoCollection<ModelClass> mongoCollectionModelClass = getMongoCollectionDataUsage(mongoClient);
 
             if (modelClass != null) {
-                mongoCollectionModelClass.insertOne(modelClass);
+                InsertOneResult insertOneResult = mongoCollectionModelClass.insertOne(modelClass);
+                LOGGER.info("Insert Daily Data Usage, insertOneResult: {}", insertOneResult);
             } else {
-                mongoCollectionModelClass.insertMany(modelClassList, new InsertManyOptions().ordered(false));
+                InsertManyResult insertManyResult = mongoCollectionModelClass.insertMany(modelClassList, new InsertManyOptions().ordered(false));
+                LOGGER.info("Insert Daily Data Usage, insertManyResult: {}", insertManyResult);
             }
         } catch (Exception ex) {
             LOGGER.error("Insert Daily Data Usage Error", ex);
@@ -120,6 +126,8 @@ public class ConnectorClass {
     }
 
     public static void updateDailyDataUsage(ModelClass modelClass, String date) {
+        LOGGER.info("Update Daily Data Usage: {} | {}", modelClass, date);
+
         try (MongoClient mongoClient = create(getMongoClientSettings())) {
             MongoCollection<ModelClass> mongoCollectionModelClass = getMongoCollectionDataUsage(mongoClient);
 
@@ -130,7 +138,8 @@ public class ConnectorClass {
             Bson update = combine(update1, update2, update3);
             FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().returnDocument(AFTER);
 
-            mongoCollectionModelClass.findOneAndUpdate(filter, update, options);
+            ModelClass modelClassAfterUpdate = mongoCollectionModelClass.findOneAndUpdate(filter, update, options);
+            LOGGER.info("Update Daily Data Usage, modelClassAfterUpdate: {}", modelClassAfterUpdate);
         } catch (Exception ex) {
             LOGGER.error("Update Daily Data Usage Error", ex);
         }

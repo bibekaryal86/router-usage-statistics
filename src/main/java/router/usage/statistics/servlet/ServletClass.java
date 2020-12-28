@@ -33,7 +33,7 @@ public class ServletClass extends HttpServlet {
         List<String> selectedMonth = singletonList(selectedYearMonth[1]);
 
         Set<String> yearMonthSet = retrieveUniqueDatesOnly();
-        List<ModelClass> modelClassList = retrieveDataUsages(selectedYear, selectedMonth);
+        List<ModelClass> modelClassList = retrieveDataUsages(selectedYear, selectedMonth, false);
         ModelClass modelClassTotal = calculateTotalDataUsage(modelClassList);
 
         String htmlToDisplay = getDisplay(modelClassList, modelClassTotal, selected, yearMonthSet);
