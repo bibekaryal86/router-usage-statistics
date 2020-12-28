@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 
+import static java.lang.Long.parseLong;
 import static java.time.LocalTime.MIDNIGHT;
 import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Arrays.asList;
@@ -50,15 +51,19 @@ public class ServiceClass {
     private static List<String> months;
 
     public static void insertDataUsages() {
+        LOGGER.info("Start Insert Data Usages");
+
         LocalDate localDate = LocalDate.now();
         initYearsMonths(localDate);
 
         List<ModelClass> modelClassListJsoup = getWanTraffic("day", "31");
-        List<ModelClass> modelClassListMongo = retrieveDataUsages(years, months);
+        List<ModelClass> modelClassListMongo = retrieveDataUsages(years, months, true);
 
         dailyDataInsert(modelClassListJsoup, modelClassListMongo);
         dailyDataUpdate(modelClassListJsoup, modelClassListMongo);
         todayData(modelClassListMongo, localDate.toString());
+
+        LOGGER.info("Finish Insert Data Usages");
     }
 
     public static Set<String> retrieveUniqueDatesOnly() {
@@ -68,8 +73,16 @@ public class ServiceClass {
                 .collect(toSet());
     }
 
-    public static List<ModelClass> retrieveDataUsages(List<String> years, List<String> months) {
+    public static List<ModelClass> retrieveDataUsages(List<String> years, List<String> months, boolean isFromInsert) {
+        if (isFromInsert) {
+            LOGGER.info("Retrieve Data Usages, years | months: {} | {}", years, months);
+        }
+
         List<ModelClass> modelClassList = retrieveDailyDataUsage(years);
+
+        if (isFromInsert) {
+            LOGGER.info("Retrieve Data Usages, modelClassList: {}", modelClassList);
+        }
 
         if (isEmpty(months)) {
             return modelClassList;
@@ -79,6 +92,7 @@ public class ServiceClass {
     }
 
     public static ModelClass calculateTotalDataUsage(List<ModelClass> modelClassList) {
+        LocalDate localDate = LocalDate.now();
         BigDecimal totalUploads = new BigDecimal("0.00");
         BigDecimal totalDownloads = new BigDecimal("0.00");
         BigDecimal totalTotals = new BigDecimal("0.00");
@@ -89,10 +103,14 @@ public class ServiceClass {
             totalTotals = totalTotals.add(new BigDecimal(modelClass.getDataTotal()));
         }
 
-        return new ModelClass(null, null, null, null, totalUploads.toString(), totalDownloads.toString(), totalTotals.toString());
+        return new ModelClass(null, localDate.toString(), String.valueOf(localDate.getYear()),
+                localDate.getDayOfWeek().toString(), totalUploads.toString(), totalDownloads.toString(),
+                totalTotals.toString());
     }
 
     private static List<ModelClass> getWanTraffic(String mode, String dura) {
+        LOGGER.info("Start Get Wan Traffic: {} | {}", mode, dura);
+
         if (!isLoggedIn()) {
             login();
         }
@@ -117,7 +135,8 @@ public class ServiceClass {
                 }
             }
 
-            List<ModelClass> modelClassList = convertDataUsage(mode, Long.parseLong(dura), document.body().text());
+            List<ModelClass> modelClassList = convertDataUsage(mode, parseLong(dura), document.body().text());
+            LOGGER.info("Get Wan Traffic, modelClassList: {}", modelClassList);
 
             if (dura.equals("24")) {
                 List<ModelClass> filteredModelClassList = filterDataUsageListByToday(modelClassList);
@@ -147,10 +166,13 @@ public class ServiceClass {
     }
 
     private static void dailyDataInsert(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
+        LOGGER.info("Daily Data Insert: {} | {}", modelClassListJsoup.size(), modelClassListMongo.size());
+
         if (modelClassListJsoup.isEmpty()) {
             LOGGER.error("Data Usage List Jsoup to Insert is Empty");
         } else {
             List<ModelClass> modelClassListToInsert = filterDataUsageListToInsert(modelClassListJsoup, modelClassListMongo);
+            LOGGER.info("Daily Data Insert, modelClassListToInsert: {}", modelClassListToInsert);
 
             if (!modelClassListToInsert.isEmpty()) {
                 if (modelClassListToInsert.size() == 1) {
@@ -163,17 +185,22 @@ public class ServiceClass {
     }
 
     private static void dailyDataUpdate(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
+        LOGGER.info("Daily Data Update: {} | {}", modelClassListJsoup.size(), modelClassListMongo.size());
+
         if (modelClassListJsoup.isEmpty()) {
             LOGGER.info("Data Usage List Jsoup to Update is Empty");
         } else {
             List<ModelClass> modelClassListToUpdate = filterDataUsageListToUpdate(modelClassListJsoup, modelClassListMongo);
+            LOGGER.info("Daily Data Insert, modelClassListToUpdate: {}", modelClassListToUpdate);
             modelClassListToUpdate.forEach(modelClassToUpdate -> updateDailyDataUsage(modelClassToUpdate, modelClassToUpdate.getDate()));
         }
     }
 
     private static void todayData(List<ModelClass> modelClassListMongo, String todayDate) {
+        LOGGER.info("Today Data: {} | {}", modelClassListMongo.size(), todayDate);
         ModelClass modelClassTodayMongo = filterDataUsageListByToday(modelClassListMongo, todayDate);
         ModelClass modelClassTodayJsoup = getWanTraffic("hour", "24").get(0);
+        LOGGER.info("Today Data: {} | {}", modelClassTodayMongo, modelClassTodayJsoup);
 
         if (modelClassTodayJsoup == null) {
             LOGGER.error("Data Usage of Today to Insert/Update is Null");
