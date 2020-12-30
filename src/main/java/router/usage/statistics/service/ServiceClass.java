@@ -81,7 +81,7 @@ public class ServiceClass {
         List<ModelClass> modelClassList = retrieveDailyDataUsage(years);
 
         if (isFromInsert) {
-            LOGGER.info("Retrieve Data Usages, modelClassList: {}", modelClassList);
+            LOGGER.info("Retrieve Data Usages, modelClassList: {}", modelClassList.size());
         }
 
         if (isEmpty(months)) {
@@ -136,7 +136,7 @@ public class ServiceClass {
             }
 
             List<ModelClass> modelClassList = convertDataUsage(mode, parseLong(dura), document.body().text());
-            LOGGER.info("Get Wan Traffic, modelClassList: {}", modelClassList);
+            LOGGER.info("Get Wan Traffic, modelClassList: {}", modelClassList.size());
 
             if (dura.equals("24")) {
                 List<ModelClass> filteredModelClassList = filterDataUsageListByToday(modelClassList);
@@ -191,7 +191,7 @@ public class ServiceClass {
             LOGGER.info("Data Usage List Jsoup to Update is Empty");
         } else {
             List<ModelClass> modelClassListToUpdate = filterDataUsageListToUpdate(modelClassListJsoup, modelClassListMongo);
-            LOGGER.info("Daily Data Insert, modelClassListToUpdate: {}", modelClassListToUpdate);
+            LOGGER.info("Daily Data Insert, modelClassListToUpdate: {}", modelClassListToUpdate.size());
             modelClassListToUpdate.forEach(modelClassToUpdate -> updateDailyDataUsage(modelClassToUpdate, modelClassToUpdate.getDate()));
         }
     }
