@@ -138,8 +138,7 @@ public class ConnectorClass {
             Bson update = combine(update1, update2, update3);
             FindOneAndUpdateOptions options = new FindOneAndUpdateOptions().returnDocument(AFTER);
 
-            ModelClass modelClassAfterUpdate = mongoCollectionModelClass.findOneAndUpdate(filter, update, options);
-            LOGGER.info("Update Daily Data Usage, modelClassAfterUpdate: {}", modelClassAfterUpdate);
+            mongoCollectionModelClass.findOneAndUpdate(filter, update, options);
         } catch (Exception ex) {
             LOGGER.error("Update Daily Data Usage Error", ex);
         }
