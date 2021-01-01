@@ -20,6 +20,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 public class SchedulerClass {
 
     private static final Logger LOGGER = getLogger(SchedulerClass.class);
+    private static final Integer MINUTE_TO_EXECUTE = 3;
 
     public void start() {
         LOGGER.info("Start Quartz Scheduler");
@@ -33,13 +34,17 @@ public class SchedulerClass {
                     .build();
 
             int hour = now().getHour();
-            if (hour == 23) {
-                hour = 0;
-            } else {
-                hour = hour + 1;
+            int minute = now().getMinute();
+
+            if (minute > MINUTE_TO_EXECUTE) {
+                if (hour == 23) {
+                    hour = 0;
+                } else {
+                    hour = hour + 1;
+                }
             }
 
-            Date triggerStartTime = valueOf(of(now().getYear(), now().getMonth(), now().getDayOfMonth(), hour, 3));
+            Date triggerStartTime = valueOf(of(now().getYear(), now().getMonth(), now().getDayOfMonth(), hour, MINUTE_TO_EXECUTE));
 
             Trigger triggerOne = newTrigger()
                     .withIdentity("Trigger_One")

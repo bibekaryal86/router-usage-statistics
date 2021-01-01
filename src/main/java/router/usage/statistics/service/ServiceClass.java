@@ -18,11 +18,10 @@ import static java.lang.Long.parseLong;
 import static java.time.LocalTime.MIDNIGHT;
 import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
+import static java.util.Collections.*;
 import static java.util.regex.Pattern.compile;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
 import static org.eclipse.jetty.util.LazyList.isEmpty;
 import static org.jsoup.Jsoup.parse;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -70,7 +69,9 @@ public class ServiceClass {
         List<String> uniqueDates = retrieveUniqueDates();
         return uniqueDates.stream()
                 .map(uniqueDate -> uniqueDate.substring(0, 7))
-                .collect(toSet());
+                .sorted(reverseOrder())
+                .collect(toCollection(LinkedHashSet::new));
+        // unsorted.stream().sorted(nullsLast(comparing(ClassName::getMethodName, nullsLast(naturalOrder())))).collect(toList());   // NOSONAR
     }
 
     public static List<ModelClass> retrieveDataUsages(List<String> years, List<String> months, boolean isFromInsert) {
@@ -156,9 +157,10 @@ public class ServiceClass {
         months = new ArrayList<>();
 
         years.add(String.valueOf(localDate.getYear()));
-        months.add(String.valueOf(localDate.getMonthValue()));
-        months.add(String.valueOf(localDate.minusMonths(1).getMonthValue()));
-        months.add(String.valueOf(localDate.minusMonths(2).getMonthValue()));
+
+        months.add(localDate.getMonthValue() < 10 ? "0" + localDate.getMonthValue() : "" + localDate.getMonthValue());
+        months.add(localDate.minusMonths(1).getMonthValue() < 10 ? "0" + localDate.minusMonths(1).getMonthValue() : "" + localDate.minusMonths(1).getMonthValue());
+        months.add(localDate.minusMonths(2).getMonthValue() < 10 ? "0" + localDate.minusMonths(2).getMonthValue() : "" + localDate.minusMonths(2).getMonthValue());
 
         if (localDate.getMonthValue() < 3) {
             years.add(String.valueOf(localDate.minusYears(1).getYear()));
