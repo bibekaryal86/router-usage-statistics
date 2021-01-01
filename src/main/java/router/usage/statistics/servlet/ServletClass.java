@@ -25,7 +25,12 @@ public class ServletClass extends HttpServlet {
 
         String selected = request.getParameter("selected");
         if (selected == null || selected.isEmpty()) {
-            selected = now().getYear() + "-" + now().getMonthValue();
+            int monthValue = now().getMonthValue();
+            if (monthValue < 10) {
+                selected = now().getYear() + "-0" + now().getMonthValue();
+            } else {
+                selected = now().getYear() + "-" + now().getMonthValue();
+            }
         }
 
         String[] selectedYearMonth = selected.split("-");
