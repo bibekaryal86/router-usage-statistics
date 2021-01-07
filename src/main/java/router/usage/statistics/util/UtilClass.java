@@ -1,11 +1,14 @@
 package router.usage.statistics.util;
 
-import static java.lang.System.getProperty;
-import static java.lang.System.getenv;
+import static java.lang.String.valueOf;
+import static java.lang.System.*;
+import static java.time.LocalDate.now;
 
 public class UtilClass {
 
-    private UtilClass() { throw new IllegalStateException("Utility class"); }
+    private UtilClass() {
+        throw new IllegalStateException("Utility class");
+    }
 
     // Constants
 
@@ -24,10 +27,14 @@ public class UtilClass {
     }
 
     public static String getLongerDate() {
-        return String.valueOf(System.currentTimeMillis());
+        return valueOf(currentTimeMillis());
     }
 
     public static String getShorterDate() {
-        return String.valueOf(System.currentTimeMillis()).substring(0, 10);
+        return valueOf(currentTimeMillis()).substring(0, 10);
+    }
+
+    public static boolean isDateTodayDate(String date) {
+        return date.equals(now().toString());
     }
 }

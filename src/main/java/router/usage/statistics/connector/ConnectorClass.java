@@ -126,7 +126,9 @@ public class ConnectorClass {
     }
 
     public static void updateDailyDataUsage(ModelClass modelClass, String date) {
-        LOGGER.info("Update Daily Data Usage: {} | {}", modelClass, date);
+        if (isDateTodayDate(date)) {
+            LOGGER.info("Update Daily Data Usage: {} | {}", modelClass, date);
+        }
 
         try (MongoClient mongoClient = create(getMongoClientSettings())) {
             MongoCollection<ModelClass> mongoCollectionModelClass = getMongoCollectionDataUsage(mongoClient);

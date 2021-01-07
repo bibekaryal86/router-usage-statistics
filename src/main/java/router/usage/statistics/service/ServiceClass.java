@@ -334,7 +334,8 @@ public class ServiceClass {
         return modelClassListJsoup.stream()
                 .filter(modelClassJsoup -> modelClassListMongo.stream()
                         .filter(modelClassMongo -> modelClassMongo.getDate().equals(modelClassJsoup.getDate()))
-                        .anyMatch(modelClassMongo -> !modelClassJsoup.getDataDownload().equals(modelClassMongo.getDataDownload())))
+                        .anyMatch(modelClassMongo -> !modelClassJsoup.getDataDownload().equals("0") &&
+                                !modelClassJsoup.getDataDownload().equals(modelClassMongo.getDataDownload())))
                 .collect(toList());
     }
 }
