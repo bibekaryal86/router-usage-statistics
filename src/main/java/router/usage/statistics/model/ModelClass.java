@@ -36,30 +36,69 @@ public class ModelClass {
     }
 
     // getters
-    public ObjectId getId() { return id; }
+    public ObjectId getId() {
+        return id;
+    }
+
     public String getDate() {
         return date;
     }
+
     public String getYear() {
         return year;
     }
-    public String getDay() { return day; }
+
+    public String getDay() {
+        return day;
+    }
+
     public String getDataUpload() {
         return dataUpload;
     }
+
     public String getDataDownload() {
         return dataDownload;
     }
-    public String getDataTotal() { return dataTotal; }
+
+    public String getDataTotal() {
+        return dataTotal;
+    }
 
     // setters with builder pattern
-    public ModelClass setId(ObjectId id) { this.id = id; return this; }
-    public ModelClass setDate(String date) { this.date = date; return this; }
-    public ModelClass setYear(String year) { this.year = year; return this; }
-    public ModelClass setDay(String day) { this.day = day; return this; }
-    public ModelClass setDataUpload(String dataUpload) { this.dataUpload = dataUpload; return this; }
-    public ModelClass setDataDownload(String dataDownload) { this.dataDownload = dataDownload; return this; }
-    public ModelClass setDataTotal(String dataTotal) { this.dataTotal = dataTotal; return this; }
+    public ModelClass setId(ObjectId id) {
+        this.id = id;
+        return this;
+    }
+
+    public ModelClass setDate(String date) {
+        this.date = date;
+        return this;
+    }
+
+    public ModelClass setYear(String year) {
+        this.year = year;
+        return this;
+    }
+
+    public ModelClass setDay(String day) {
+        this.day = day;
+        return this;
+    }
+
+    public ModelClass setDataUpload(String dataUpload) {
+        this.dataUpload = dataUpload;
+        return this;
+    }
+
+    public ModelClass setDataDownload(String dataDownload) {
+        this.dataDownload = dataDownload;
+        return this;
+    }
+
+    public ModelClass setDataTotal(String dataTotal) {
+        this.dataTotal = dataTotal;
+        return this;
+    }
 
     @Override
     public String toString() {

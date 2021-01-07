@@ -129,7 +129,7 @@ public class ViewClass {
         StringBuilder stringBuilder = new StringBuilder(trOpen);
 
         if (isHeader) {
-           headers.forEach(header -> stringBuilder.append(getTableColumn(true, header, false)));
+            headers.forEach(header -> stringBuilder.append(getTableColumn(true, header, false)));
         } else {
             stringBuilder.append(getTableColumn(false, getFormattedDate(modelClass.getDate(), modelClass.getDay()), false));
             stringBuilder.append(getTableColumn(false, getFormattedData(modelClass.getDataUpload()), false));
@@ -169,7 +169,7 @@ public class ViewClass {
 
         if (isAddLink) {
             return thtdOpen +
-                    addLink("/?selected="+value, value) +
+                    addLink("/?selected=" + value, value) +
                     thtdClose;
         } else {
             return thtdOpen +
@@ -184,11 +184,11 @@ public class ViewClass {
 
     private static String getFormattedData(String dataInput) {
         return "" +
-                new DecimalFormat("#,###.##")
-                .format(new BigDecimal(dataInput)
-                .divide(new BigDecimal("1024"), 2, UP)
-                .divide(new BigDecimal("1024"), 2, UP)
-                .divide(new BigDecimal("1024"), 2, UP)) +
+                new DecimalFormat("#,##0.00")
+                        .format(new BigDecimal(dataInput)
+                                .divide(new BigDecimal("1024"), 2, UP)
+                                .divide(new BigDecimal("1024"), 2, UP)
+                                .divide(new BigDecimal("1024"), 2, UP)) +
                 " GB";
     }
 
