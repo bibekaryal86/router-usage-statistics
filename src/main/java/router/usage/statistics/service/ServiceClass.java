@@ -9,16 +9,14 @@ import router.usage.statistics.model.ModelClass;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 
 import static java.lang.Long.parseLong;
-import static java.time.LocalTime.MIDNIGHT;
-import static java.time.format.DateTimeFormatter.ofPattern;
 import static java.util.Arrays.asList;
-import static java.util.Collections.*;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.reverseOrder;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
@@ -38,7 +36,6 @@ public class ServiceClass {
     private static final Logger LOGGER = getLogger(ServiceClass.class);
 
     private static Map<String, String> cookies = null;
-    private static final String LOCAL_DATE_TIME_PATTERN = "yyyy-MM-dd HH:00 a";
     private static final String USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, " +
             "like Gecko) Chrome/87.0.4280.88 Safari/537.36";
     private static final String LOGIN_ACTION_URL = "http://router.asus.com/login.cgi";
@@ -55,12 +52,11 @@ public class ServiceClass {
         LocalDate localDate = LocalDate.now();
         initYearsMonths(localDate);
 
-        List<ModelClass> modelClassListJsoup = getWanTraffic("day", "31");
+        List<ModelClass> modelClassListJsoup = getWanTraffic();
         List<ModelClass> modelClassListMongo = retrieveDataUsages(years, months, true);
 
         dailyDataInsert(modelClassListJsoup, modelClassListMongo);
         dailyDataUpdate(modelClassListJsoup, modelClassListMongo);
-        todayData(modelClassListMongo, localDate.toString());
 
         LOGGER.info("Finish Insert Data Usages");
     }
@@ -109,14 +105,14 @@ public class ServiceClass {
                 totalTotals.toString());
     }
 
-    private static List<ModelClass> getWanTraffic(String mode, String dura) {
-        LOGGER.info("Start Get Wan Traffic: {} | {}", mode, dura);
+    private static List<ModelClass> getWanTraffic() {
+        LOGGER.info("Start Get Wan Traffic");
 
         if (!isLoggedIn()) {
             login();
         }
 
-        Connection.Response wanTrafficResponse = wanTraffic(mode, dura);
+        Connection.Response wanTrafficResponse = wanTraffic();
 
         if (wanTrafficResponse == null) {
             return emptyList();
@@ -127,7 +123,7 @@ public class ServiceClass {
 
             if (!isLoggedIn(document)) {
                 login();
-                wanTrafficResponse = wanTraffic(mode, dura);
+                wanTrafficResponse = wanTraffic();
 
                 if (wanTrafficResponse == null) {
                     return emptyList();
@@ -136,16 +132,10 @@ public class ServiceClass {
                 }
             }
 
-            List<ModelClass> modelClassList = convertDataUsage(mode, parseLong(dura), document.body().text());
+            List<ModelClass> modelClassList = convertDataUsage(parseLong("31"), document.body().text());
             LOGGER.info("Get Wan Traffic, modelClassList: {}", modelClassList.size());
 
-            if (dura.equals("24")) {
-                List<ModelClass> filteredModelClassList = filterDataUsageListByToday(modelClassList);
-                ModelClass modelClassToday = calculateTotalDataUsage(filteredModelClassList);
-                return singletonList(modelClassToday);
-            } else {
-                return modelClassList;
-            }
+            return modelClassList;
         } catch (Exception ex) {
             LOGGER.error("Get Wan Traffic Error", ex);
             return emptyList();
@@ -198,23 +188,6 @@ public class ServiceClass {
         }
     }
 
-    private static void todayData(List<ModelClass> modelClassListMongo, String todayDate) {
-        LOGGER.info("Today Data: {} | {}", modelClassListMongo.size(), todayDate);
-        ModelClass modelClassTodayMongo = filterDataUsageListByToday(modelClassListMongo, todayDate);
-        ModelClass modelClassTodayJsoup = getWanTraffic("hour", "24").get(0);
-        LOGGER.info("Today Data: {} | {}", modelClassTodayMongo, modelClassTodayJsoup);
-
-        if (modelClassTodayJsoup == null) {
-            LOGGER.error("Data Usage of Today to Insert/Update is Null");
-        } else {
-            if (modelClassTodayMongo == null) {
-                insertDailyDataUsage(modelClassTodayJsoup, null);
-            } else {
-                updateDailyDataUsage(modelClassTodayJsoup, todayDate);
-            }
-        }
-    }
-
     private static void login() {
         Map<String, String> formData = new HashMap<>();
         formData.put("group_id", "");
@@ -248,11 +221,11 @@ public class ServiceClass {
         }
     }
 
-    private static Connection.Response wanTraffic(String mode, String dura) {
+    private static Connection.Response wanTraffic() {
         Map<String, String> formData = new HashMap<>();
         formData.put("client", "all");
-        formData.put("mode", mode);
-        formData.put("dura", dura);
+        formData.put("mode", "day");
+        formData.put("dura", "31");
         formData.put("date", getShorterDate());
         formData.put("_", getLongerDate());
 
@@ -260,7 +233,7 @@ public class ServiceClass {
                 Connection.Method.GET, USER_AGENT);
     }
 
-    private static List<ModelClass> convertDataUsage(String mode, long dura, String bodyTexts) {
+    private static List<ModelClass> convertDataUsage(long dura, String bodyTexts) {
         List<ModelClass> modelClassList = new ArrayList<>();
 
         int beginIndex = bodyTexts.indexOf("[[");
@@ -271,25 +244,24 @@ public class ServiceClass {
 
         bodyTextList.forEach(bodyText -> {
             String[] bodyTextArr = bodyText.split(",");
-            modelClassList.add(getDataUsage(count.get(), dura, mode, bodyTextArr[0], bodyTextArr[1]));
+            modelClassList.add(getDataUsage(count.get(), dura, bodyTextArr[0], bodyTextArr[1]));
             count.getAndIncrement();
         });
 
-        return modelClassList;
+        return filterInvalidData(modelClassList);
     }
 
-    private static ModelClass getDataUsage(long currentCount, long totalCount, String mode, String upload, String download) {
-        String total = new BigDecimal(upload).add(new BigDecimal(download)).toString();
+    private static List<ModelClass> filterInvalidData(List<ModelClass> modelClassList) {
+        return modelClassList.stream()
+                .filter(modelClass -> !modelClass.getDataDownload().equals("0"))
+                .collect(toList());
+    }
 
-        if ("hour".equals(mode)) {
-            LocalDateTime localDateTime = LocalDateTime.now().minusHours(totalCount - currentCount);
-            return new ModelClass(null, localDateTime.format(ofPattern(LOCAL_DATE_TIME_PATTERN)), String.valueOf(localDateTime.getYear()),
-                    localDateTime.getDayOfWeek().toString(), upload, download, total);
-        } else {
-            LocalDate localDate = LocalDate.now().minusDays(totalCount - currentCount);
-            return new ModelClass(null, localDate.toString(), String.valueOf(localDate.getYear()),
-                    localDate.getDayOfWeek().toString(), upload, download, total);
-        }
+    private static ModelClass getDataUsage(long currentCount, long totalCount, String upload, String download) {
+        String total = new BigDecimal(upload).add(new BigDecimal(download)).toString();
+        LocalDate localDate = LocalDate.now().minusDays(totalCount - currentCount);
+        return new ModelClass(null, localDate.toString(), String.valueOf(localDate.getYear()),
+                localDate.getDayOfWeek().toString(), upload, download, total);
     }
 
     private static List<ModelClass> filterDataUsageListByMonth(List<ModelClass> modelClassList, List<String> months) {
@@ -302,28 +274,12 @@ public class ServiceClass {
                 .collect(toList());
     }
 
-    private static ModelClass filterDataUsageListByToday(List<ModelClass> modelClassListMongo, String todayDate) {
-        return modelClassListMongo.stream()
-                .filter(modelClassMongo -> todayDate.equals(modelClassMongo.getDate()))
-                .findFirst()
-                .orElse(null);
-    }
-
-    private static List<ModelClass> filterDataUsageListByToday(List<ModelClass> modelClassListJsoup) {
-        LocalDateTime midnightHour = LocalDateTime.of(LocalDate.now(), MIDNIGHT);
-        return modelClassListJsoup.stream()
-                .filter(modelClass -> LocalDateTime.parse(modelClass.getDate(), ofPattern(LOCAL_DATE_TIME_PATTERN)).isAfter(midnightHour))
-                .collect(toList());
-    }
-
     private static List<ModelClass> filterDataUsageListToInsert(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
         List<String> modelClassListMongoDates = modelClassListMongo.stream()
                 .map(ModelClass::getDate)
                 .collect(toList());
 
         return modelClassListJsoup.stream()
-                // do not insert for today's date (insert today's tomorrow)
-                .filter(modelClassJsoup -> !modelClassJsoup.getDate().equals(LocalDate.now().toString()))
                 // do not insert if record exists in database for given date
                 .filter(modelClassJsoup -> !modelClassListMongoDates.contains(modelClassJsoup.getDate()))
                 .collect(toList());
@@ -333,8 +289,7 @@ public class ServiceClass {
         // find model classes where data_download does not match in the two lists
         return modelClassListJsoup.stream()
                 .filter(modelClassJsoup -> modelClassListMongo.stream()
-                        .filter(modelClassMongo -> modelClassMongo.getDate().equals(modelClassJsoup.getDate()))
-                        .anyMatch(modelClassMongo -> !modelClassJsoup.getDataDownload().equals("0") &&
+                        .anyMatch(modelClassMongo -> modelClassMongo.getDate().equals(modelClassJsoup.getDate()) &&
                                 !modelClassJsoup.getDataDownload().equals(modelClassMongo.getDataDownload())))
                 .collect(toList());
     }
