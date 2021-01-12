@@ -31,7 +31,7 @@ public class UtilClass {
     }
 
     public static String getShorterDate() {
-        return valueOf(currentTimeMillis()).substring(0, 10);
+        return valueOf((currentTimeMillis() + 86400) / 1000);
     }
 
     public static boolean isDateTodayDate(String date) {
