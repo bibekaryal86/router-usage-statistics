@@ -16,6 +16,7 @@ import java.util.regex.Matcher;
 import static java.lang.Long.parseLong;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.reverse;
 import static java.util.Collections.reverseOrder;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toCollection;
@@ -240,6 +241,7 @@ public class ServiceClass {
         int endIndex = bodyTexts.indexOf("]]");
         bodyTexts = bodyTexts.substring(beginIndex + 1, endIndex).replace("[", "").replace(" ", "");
         List<String> bodyTextList = asList(bodyTexts.split("],"));
+        reverse(bodyTextList);
         AtomicLong count = new AtomicLong(1);
 
         bodyTextList.forEach(bodyText -> {
