@@ -23,3 +23,9 @@ When running the app (on local machine which can assess the router), the followi
 
 For example: java -jar -DPORT=8005 -DDBNAME=mongodb_database_name -DDBUSR=database_username -DDBPWD=database_password 
 -DJSUSR=username_to_login_page -DJSPWD=password_to_login_page "C:\Users\ba5g3\JAVA\jarswars\router-usage-statistics.jar"
+
+- The app is one of the three repos used to save-retrieve-display data:
+  - https://github.com/bibekaryal86/router-usage-statistics-save (save data) (this)
+  - https://github.com/bibekaryal86/router-usage-statistics-java (retrieve data)
+  - https://github.com/bibekaryal86/router-usage-statistics-spa (view data)
+ 
