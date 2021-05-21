@@ -7,9 +7,6 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.FindOneAndUpdateOptions;
-import com.mongodb.client.model.InsertManyOptions;
-import com.mongodb.client.result.InsertManyResult;
-import com.mongodb.client.result.InsertOneResult;
 import org.bson.codecs.configuration.CodecRegistry;
 import org.bson.codecs.pojo.PojoCodecProvider;
 import org.bson.conversions.Bson;
@@ -107,28 +104,19 @@ public class ConnectorClass {
         return mongoClient.getDatabase(dbName).getCollection(COLLECTION_NAME, ModelClass.class);
     }
 
-    public static void insertDailyDataUsage(ModelClass modelClass, List<ModelClass> modelClassList) {
-        LOGGER.info("Insert Daily Data Usage: {} | {}", modelClass, modelClassList);
+    public static void insertDailyDataUsage(ModelClass modelClass) {
+        LOGGER.info("Insert Daily Data Usage: {}", modelClass);
 
         try (MongoClient mongoClient = create(getMongoClientSettings())) {
             MongoCollection<ModelClass> mongoCollectionModelClass = getMongoCollectionDataUsage(mongoClient);
-
-            if (modelClass != null) {
-                InsertOneResult insertOneResult = mongoCollectionModelClass.insertOne(modelClass);
-                LOGGER.info("Insert Daily Data Usage, insertOneResult: {}", insertOneResult);
-            } else {
-                InsertManyResult insertManyResult = mongoCollectionModelClass.insertMany(modelClassList, new InsertManyOptions().ordered(false));
-                LOGGER.info("Insert Daily Data Usage, insertManyResult: {}", insertManyResult);
-            }
+            mongoCollectionModelClass.insertOne(modelClass);
         } catch (Exception ex) {
             LOGGER.error("Insert Daily Data Usage Error", ex);
         }
     }
 
     public static void updateDailyDataUsage(ModelClass modelClass, String date) {
-        if (isDateTodayDate(date)) {
-            LOGGER.info("Update Daily Data Usage: {} | {}", modelClass, date);
-        }
+        LOGGER.info("Update Daily Data Usage: {} | {}", date, modelClass);
 
         try (MongoClient mongoClient = create(getMongoClientSettings())) {
             MongoCollection<ModelClass> mongoCollectionModelClass = getMongoCollectionDataUsage(mongoClient);
@@ -146,13 +134,21 @@ public class ConnectorClass {
         }
     }
 
-    public static List<ModelClass> retrieveDailyDataUsage(List<String> years) {
+    public static List<ModelClass> retrieveDailyDataUsage(List<String> years, String date) {
         List<ModelClass> modelClassList = new ArrayList<>();
 
         try (MongoClient mongoClient = create(getMongoClientSettings())) {
             MongoCollection<ModelClass> mongoCollectionModelClass = getMongoCollectionDataUsage(mongoClient);
-            FindIterable<ModelClass> findIterableModelClass = mongoCollectionModelClass.find(in("year", years), ModelClass.class)
-                    .sort(descending("date"));
+
+            FindIterable<ModelClass> findIterableModelClass;
+
+            if (date == null) {
+                findIterableModelClass = mongoCollectionModelClass.find(in("year", years), ModelClass.class)
+                        .sort(descending("date"));
+            } else {
+                findIterableModelClass = mongoCollectionModelClass.find(in("date", date), ModelClass.class);
+            }
+
             findIterableModelClass.forEach(modelClassList::add);
         } catch (Exception ex) {
             LOGGER.error("Retrieve Daily Data Usage Error", ex);

@@ -33,18 +33,7 @@ public class SchedulerClass {
                     .withIdentity("Job_One")
                     .build();
 
-            int hour = now().getHour();
-            int minute = now().getMinute();
-
-            if (minute > MINUTE_TO_EXECUTE) {
-                if (hour == 23) {
-                    hour = 0;
-                } else {
-                    hour = hour + 1;
-                }
-            }
-
-            Date triggerStartTime = valueOf(of(now().getYear(), now().getMonth(), now().getDayOfMonth(), hour, MINUTE_TO_EXECUTE));
+            Date triggerStartTime = valueOf(of(now().getYear(), now().getMonth(), now().getDayOfMonth(), now().getHour() + 1, MINUTE_TO_EXECUTE));
 
             Trigger triggerOne = newTrigger()
                     .withIdentity("Trigger_One")

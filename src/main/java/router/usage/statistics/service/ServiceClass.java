@@ -8,14 +8,11 @@ import org.slf4j.Logger;
 import router.usage.statistics.model.ModelClass;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 
-import static java.lang.Long.parseLong;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.reverse;
 import static java.util.Collections.reverseOrder;
 import static java.util.regex.Pattern.compile;
@@ -44,20 +41,14 @@ public class ServiceClass {
     private static final String GET_TRAFFIC_WAN_URL = "http://router.asus.com/getWanTraffic.asp";
     private static final String TRAFFIC_ANALYZER_URL = "http://router.asus.com/TrafficAnalyzer_Statistic.asp";
 
-    private static List<String> years;
-    private static List<String> months;
-
     public static void insertDataUsages() {
         LOGGER.info("Start Insert Data Usages");
 
-        LocalDate localDate = LocalDate.now();
-        initYearsMonths(localDate);
+        LocalDateTime localDateTime = LocalDateTime.now();
+        ModelClass modelClassJsoup = getWanTraffic(localDateTime);
+        ModelClass modelClassMongo = retrieveDataUsage(localDateTime);
 
-        List<ModelClass> modelClassListJsoup = getWanTraffic();
-        List<ModelClass> modelClassListMongo = retrieveDataUsages(years, months, true);
-
-        dailyDataInsert(modelClassListJsoup, modelClassListMongo);
-        dailyDataUpdate(modelClassListJsoup, modelClassListMongo);
+        dailyDataInsert(modelClassJsoup, modelClassMongo);
 
         LOGGER.info("Finish Insert Data Usages");
     }
@@ -71,16 +62,8 @@ public class ServiceClass {
         // unsorted.stream().sorted(nullsLast(comparing(ClassName::getMethodName, nullsLast(naturalOrder())))).collect(toList());   // NOSONAR
     }
 
-    public static List<ModelClass> retrieveDataUsages(List<String> years, List<String> months, boolean isFromInsert) {
-        if (isFromInsert) {
-            LOGGER.info("Retrieve Data Usages, years | months: {} | {}", years, months);
-        }
-
-        List<ModelClass> modelClassList = retrieveDailyDataUsage(years);
-
-        if (isFromInsert) {
-            LOGGER.info("Retrieve Data Usages, modelClassList: {}", modelClassList.size());
-        }
+    public static List<ModelClass> retrieveDataUsages(List<String> years, List<String> months) {
+        List<ModelClass> modelClassList = retrieveDailyDataUsage(years, null);
 
         if (isEmpty(months)) {
             return modelClassList;
@@ -89,8 +72,19 @@ public class ServiceClass {
         }
     }
 
+    public static ModelClass retrieveDataUsage(LocalDateTime localDateTime) {
+        String date = getModelClassDate(localDateTime);
+        List<ModelClass> modelClassList = retrieveDailyDataUsage(null, date);
+
+        if (isEmpty(modelClassList)) {
+            return null;
+        } else {
+            return modelClassList.get(0);
+        }
+    }
+
     public static ModelClass calculateTotalDataUsage(List<ModelClass> modelClassList) {
-        LocalDate localDate = LocalDate.now();
+        LocalDateTime localDateTime = LocalDateTime.now();
         BigDecimal totalUploads = new BigDecimal("0.00");
         BigDecimal totalDownloads = new BigDecimal("0.00");
         BigDecimal totalTotals = new BigDecimal("0.00");
@@ -101,12 +95,12 @@ public class ServiceClass {
             totalTotals = totalTotals.add(new BigDecimal(modelClass.getDataTotal()));
         }
 
-        return new ModelClass(null, localDate.toString(), String.valueOf(localDate.getYear()),
-                localDate.getDayOfWeek().toString(), totalUploads.toString(), totalDownloads.toString(),
+        return new ModelClass(null, localDateTime.toLocalDate().toString(), String.valueOf(localDateTime.getYear()),
+                localDateTime.getDayOfWeek().toString(), totalUploads.toString(), totalDownloads.toString(),
                 totalTotals.toString());
     }
 
-    private static List<ModelClass> getWanTraffic() {
+    private static ModelClass getWanTraffic(LocalDateTime localDateTime) {
         LOGGER.info("Start Get Wan Traffic");
 
         if (!isLoggedIn()) {
@@ -116,7 +110,7 @@ public class ServiceClass {
         Connection.Response wanTrafficResponse = wanTraffic();
 
         if (wanTrafficResponse == null) {
-            return emptyList();
+            return null;
         }
 
         try {
@@ -127,65 +121,30 @@ public class ServiceClass {
                 wanTrafficResponse = wanTraffic();
 
                 if (wanTrafficResponse == null) {
-                    return emptyList();
+                    return null;
                 } else {
                     document = parse(wanTrafficResponse.parse().html());
                 }
             }
 
-            List<ModelClass> modelClassList = convertDataUsage(parseLong("31"), document.body().text());
-            LOGGER.info("Get Wan Traffic, modelClassList: {}", modelClassList.size());
-
-            return modelClassList;
+            return convertDataUsage(document.body().text(), localDateTime);
         } catch (Exception ex) {
             LOGGER.error("Get Wan Traffic Error", ex);
-            return emptyList();
+            return null;
         }
     }
 
-    private static void initYearsMonths(LocalDate localDate) {
-        years = new ArrayList<>();
-        months = new ArrayList<>();
+    private static void dailyDataInsert(ModelClass modelClassJsoup, ModelClass modelClassMongo) {
+        LOGGER.info("Daily Data Insert: {} | {}", modelClassJsoup, modelClassMongo);
 
-        years.add(String.valueOf(localDate.getYear()));
-
-        months.add(localDate.getMonthValue() < 10 ? "0" + localDate.getMonthValue() : "" + localDate.getMonthValue());
-        months.add(localDate.minusMonths(1).getMonthValue() < 10 ? "0" + localDate.minusMonths(1).getMonthValue() : "" + localDate.minusMonths(1).getMonthValue());
-        months.add(localDate.minusMonths(2).getMonthValue() < 10 ? "0" + localDate.minusMonths(2).getMonthValue() : "" + localDate.minusMonths(2).getMonthValue());
-
-        if (localDate.getMonthValue() < 3) {
-            years.add(String.valueOf(localDate.minusYears(1).getYear()));
-        }
-    }
-
-    private static void dailyDataInsert(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
-        LOGGER.info("Daily Data Insert: {} | {}", modelClassListJsoup.size(), modelClassListMongo.size());
-
-        if (modelClassListJsoup.isEmpty()) {
-            LOGGER.error("Data Usage List Jsoup to Insert is Empty");
+        if (modelClassJsoup == null) {
+            LOGGER.error("Data Usage Jsoup to Insert is Null");
         } else {
-            List<ModelClass> modelClassListToInsert = filterDataUsageListToInsert(modelClassListJsoup, modelClassListMongo);
-            LOGGER.info("Daily Data Insert, modelClassListToInsert: {}", modelClassListToInsert);
-
-            if (!modelClassListToInsert.isEmpty()) {
-                if (modelClassListToInsert.size() == 1) {
-                    insertDailyDataUsage(modelClassListToInsert.get(0), null);
-                } else {
-                    insertDailyDataUsage(null, modelClassListToInsert);
-                }
+            if (modelClassMongo == null) {
+                insertDailyDataUsage(modelClassJsoup);
+            } else {
+                updateDailyDataUsage(modelClassJsoup, modelClassJsoup.getDate());
             }
-        }
-    }
-
-    private static void dailyDataUpdate(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
-        LOGGER.info("Daily Data Update: {} | {}", modelClassListJsoup.size(), modelClassListMongo.size());
-
-        if (modelClassListJsoup.isEmpty()) {
-            LOGGER.info("Data Usage List Jsoup to Update is Empty");
-        } else {
-            List<ModelClass> modelClassListToUpdate = filterDataUsageListToUpdate(modelClassListJsoup, modelClassListMongo);
-            LOGGER.info("Daily Data Insert, modelClassListToUpdate: {}", modelClassListToUpdate.size());
-            modelClassListToUpdate.forEach(modelClassToUpdate -> updateDailyDataUsage(modelClassToUpdate, modelClassToUpdate.getDate()));
         }
     }
 
@@ -207,6 +166,24 @@ public class ServiceClass {
         }
     }
 
+    private static String getModelClassDate(LocalDateTime localDateTime) {
+        return localDateTime.getHour() == 0
+                ? localDateTime.toLocalDate().minusDays(1).toString()
+                : localDateTime.toLocalDate().toString();
+    }
+
+    private static String getModelClassYear(LocalDateTime localDateTime) {
+        return localDateTime.getHour() == 0 && localDateTime.getMonthValue() == 1 && localDateTime.getDayOfMonth() == 1
+                ? String.valueOf(localDateTime.toLocalDate().minusDays(1).getYear())
+                : String.valueOf(localDateTime.toLocalDate().getYear());
+    }
+
+    private static String getModelClassDay(LocalDateTime localDateTime) {
+        return localDateTime.getHour() == 0
+                ? localDateTime.toLocalDate().minusDays(1).getDayOfWeek().toString()
+                : localDateTime.toLocalDate().getDayOfWeek().toString();
+    }
+
     private static boolean isLoggedIn() {
         return cookies != null && cookies.containsKey("asus_token");
     }
@@ -225,8 +202,8 @@ public class ServiceClass {
     private static Connection.Response wanTraffic() {
         Map<String, String> formData = new HashMap<>();
         formData.put("client", "all");
-        formData.put("mode", "day");
-        formData.put("dura", "31");
+        formData.put("mode", "hour");
+        formData.put("dura", "24");
         formData.put("date", getShorterDate());
         formData.put("_", getLongerDate());
 
@@ -234,36 +211,28 @@ public class ServiceClass {
                 Connection.Method.GET, USER_AGENT);
     }
 
-    private static List<ModelClass> convertDataUsage(long dura, String bodyTexts) {
-        List<ModelClass> modelClassList = new ArrayList<>();
-
+    private static ModelClass convertDataUsage(String bodyTexts, LocalDateTime localDateTime) {
         int beginIndex = bodyTexts.indexOf("[[");
         int endIndex = bodyTexts.indexOf("]]");
         bodyTexts = bodyTexts.substring(beginIndex + 1, endIndex).replace("[", "").replace(" ", "");
         List<String> bodyTextList = asList(bodyTexts.split("],"));
         reverse(bodyTextList);
-        AtomicLong count = new AtomicLong(1);
 
-        bodyTextList.forEach(bodyText -> {
-            String[] bodyTextArr = bodyText.split(",");
-            modelClassList.add(getDataUsage(count.get(), dura, bodyTextArr[0], bodyTextArr[1]));
-            count.getAndIncrement();
-        });
+        int numberOfHours = localDateTime.getHour() == 0 ? bodyTextList.size() : localDateTime.getHour();
+        BigDecimal upload = new BigDecimal("0.00");
+        BigDecimal download = new BigDecimal("0.00");
 
-        return filterInvalidData(modelClassList);
-    }
+        for (int i = 0; i < numberOfHours; i++) {
+            String[] bodyTextArr = bodyTextList.get(i).split(",");
+            upload = upload.add(new BigDecimal(bodyTextArr[0]));
+            download = download.add(new BigDecimal(bodyTextArr[1]));
+        }
 
-    private static List<ModelClass> filterInvalidData(List<ModelClass> modelClassList) {
-        return modelClassList.stream()
-                .filter(modelClass -> !modelClass.getDataDownload().equals("0"))
-                .collect(toList());
-    }
-
-    private static ModelClass getDataUsage(long currentCount, long totalCount, String upload, String download) {
-        String total = new BigDecimal(upload).add(new BigDecimal(download)).toString();
-        LocalDate localDate = LocalDate.now().minusDays(totalCount - currentCount);
-        return new ModelClass(null, localDate.toString(), String.valueOf(localDate.getYear()),
-                localDate.getDayOfWeek().toString(), upload, download, total);
+        BigDecimal total = upload.add(download);
+        String date = getModelClassDate(localDateTime);
+        String year = getModelClassYear(localDateTime);
+        String day = getModelClassDay(localDateTime);
+        return new ModelClass(null, date, year, day, upload.toString(), download.toString(), total.toString());
     }
 
     private static List<ModelClass> filterDataUsageListByMonth(List<ModelClass> modelClassList, List<String> months) {
@@ -273,26 +242,6 @@ public class ServiceClass {
                             Matcher matcher = compile("-(\\w+)-").matcher(modelClass.getDate());
                             return matcher.find() && month.equals(matcher.group(1));
                         }))
-                .collect(toList());
-    }
-
-    private static List<ModelClass> filterDataUsageListToInsert(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
-        List<String> modelClassListMongoDates = modelClassListMongo.stream()
-                .map(ModelClass::getDate)
-                .collect(toList());
-
-        return modelClassListJsoup.stream()
-                // do not insert if record exists in database for given date
-                .filter(modelClassJsoup -> !modelClassListMongoDates.contains(modelClassJsoup.getDate()))
-                .collect(toList());
-    }
-
-    private static List<ModelClass> filterDataUsageListToUpdate(List<ModelClass> modelClassListJsoup, List<ModelClass> modelClassListMongo) {
-        // find model classes where data_download does not match in the two lists
-        return modelClassListJsoup.stream()
-                .filter(modelClassJsoup -> modelClassListMongo.stream()
-                        .anyMatch(modelClassMongo -> modelClassMongo.getDate().equals(modelClassJsoup.getDate()) &&
-                                !modelClassJsoup.getDataDownload().equals(modelClassMongo.getDataDownload())))
                 .collect(toList());
     }
 }
