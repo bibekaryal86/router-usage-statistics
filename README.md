@@ -9,7 +9,7 @@ The App logs into Asus Router, gets daily data usage and saves to MongoDb reposi
 
 The App also provides a way to query the saved data and display using servlet.
 
-The App does not use any frameworks or any view layer technology, it is all backend.
+The App does not use any frameworks or any view layer technology.
 
 The App runs on embedded Jetty, uses Quartz, JSoup and MongoDb driver.
 
@@ -18,7 +18,7 @@ to avoid all the conversions during calculations
 
 And, of course, Java should not be used to create html code!
 
-When running the program, the following environment variables are needed: (1) website login username (2) website login password 
+When running the app (on local machine which can assess the router), the following environment variables are needed: (1) website login username (2) website login password 
 (3) mongodb database name (4) mongodb username (5) mongodb password
 
 For example: java -jar -DPORT=8005 -DDBNAME=mongodb_database_name -DDBUSR=database_username -DDBPWD=database_password 
