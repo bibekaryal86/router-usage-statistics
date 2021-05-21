@@ -33,12 +33,17 @@ public class ServletClass extends HttpServlet {
             }
         }
 
+        String updateNow = request.getParameter("updatenow");
+        if (updateNow != null && updateNow.equals("true")) {
+            insertDataUsages();
+        }
+
         String[] selectedYearMonth = selected.split("-");
         List<String> selectedYear = singletonList(selectedYearMonth[0]);
         List<String> selectedMonth = singletonList(selectedYearMonth[1]);
 
         Set<String> yearMonthSet = retrieveUniqueDatesOnly();
-        List<ModelClass> modelClassList = retrieveDataUsages(selectedYear, selectedMonth, false);
+        List<ModelClass> modelClassList = retrieveDataUsages(selectedYear, selectedMonth);
         ModelClass modelClassTotal = calculateTotalDataUsage(modelClassList);
 
         String htmlToDisplay = getDisplay(modelClassList, modelClassTotal, selected, yearMonthSet);

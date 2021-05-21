@@ -8,6 +8,7 @@ import router.usage.statistics.scheduler.SchedulerClass;
 import router.usage.statistics.server.ServerClass;
 
 import static org.slf4j.LoggerFactory.getLogger;
+import static router.usage.statistics.service.ServiceClass.insertDataUsages;
 
 public class App {
 
@@ -18,5 +19,8 @@ public class App {
         new ServerClass().start();
         new SchedulerClass().start();
         LOGGER.info("End router-usage-statistics initialization...");
+
+        // run once when the app runs
+        insertDataUsages();
     }
 }

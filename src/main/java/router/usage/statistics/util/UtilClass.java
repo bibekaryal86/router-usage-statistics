@@ -2,7 +2,6 @@ package router.usage.statistics.util;
 
 import static java.lang.String.valueOf;
 import static java.lang.System.*;
-import static java.time.LocalDate.now;
 
 public class UtilClass {
 
@@ -26,15 +25,11 @@ public class UtilClass {
         return getProperty(keyName) == null ? getenv(keyName) : getProperty(keyName);
     }
 
-    public static String getLongerDate() {
-        return valueOf(currentTimeMillis());
-    }
-
     public static String getShorterDate() {
         return valueOf((currentTimeMillis() + 86400) / 1000);
     }
 
-    public static boolean isDateTodayDate(String date) {
-        return date.equals(now().toString());
+    public static String getLongerDate() {
+        return valueOf(currentTimeMillis());
     }
 }
